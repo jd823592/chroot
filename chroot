@@ -1,0 +1,56 @@
+#!/bin/bash
+
+SCRIPT=$(readlink -f "$0")
+CHROOT_PATH=$(dirname "$SCRIPT")
+CHROOT_DIR="$CHROOT_PATH"/$(basename "$SCRIPT")-dir
+USER=$(logname)
+
+# mount proc, sys, dev
+mount -t proc proc "$CHROOT_DIR"/proc
+mount --rbind /sys "$CHROOT_DIR"/sys
+mount --rbind /dev "$CHROOT_DIR"/dev
+mount --make-rslave "$CHROOT_DIR"/sys
+mount --make-rslave "$CHROOT_DIR"/dev
+
+# auxiliary
+
+function silent {
+    $@ >/dev/null 2>&1
+}
+
+function in_chroot {
+    chroot "$CHROOT_DIR" "$@"
+}
+
+function as_user_in_chroot {
+    in_chroot su - -c "$@" "$USER"
+}
+
+function as_user_in_chroot_dir {
+    as_user_in_chroot "cd $1 && ${@:2}"
+}
+
+function user_exists {
+    silent in_chroot id -u "$USER"
+}
+
+function user_add {
+    silent in_chroot useradd -m -G wheel "$USER"
+}
+
+function init_env {
+    as_user_in_chroot "cabal update"
+}
+
+# init user
+if ! user_exists; then
+    user_add
+    init_env
+fi
+
+# chroot
+cp -L /etc/resolv.conf "$CHROOT_DIR"/etc/resolv.conf
+chroot "$CHROOT_DIR" su - "$USER"
+
+# umount proc, sys, dev
+mount -l | cut -d" " -f3 | grep "^$CHROOT_DIR" | sort -ur | xargs umount
