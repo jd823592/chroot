@@ -39,8 +39,32 @@ function user_add {
 }
 
 function init_env {
+    in_chroot emerge-webrsync
+    in_chroot layman -S
+    in_chroot eix-sync
+
     as_user_in_chroot "cabal update"
+
+    as_user_in_chroot "git clone https://github.com/ekmett/linear"
+    as_user_in_chroot_dir "linear" "cabal install"
+
+    as_user_in_chroot "git clone https://github.com/diagrams/diagrams-lib"
+    as_user_in_chroot_dir "diagrams-lib" "cabal install"
+
+    as_user_in_chroot "git clone https://github.com/diagrams/diagrams-cairo"
+    as_user_in_chroot_dir "diagrams-cairo" "cabal install"
+
+    as_user_in_chroot "git clone https://github.com/diagrams/diagrams-gtk"
+    as_user_in_chroot_dir "diagrams-gtk" "cabal install"
+
+    as_user_in_chroot "git clone https://github.com/d3sformal/bacon"
+    as_user_in_chroot_dir "bacon" "git checkout experimental"
+    as_user_in_chroot_dir "bacon/bacon" "cabal install --dependencies-only --force-reinstalls"
 }
+
+# enable networking, X
+cp -L /etc/resolv.conf "$CHROOT_DIR"/etc/resolv.conf
+cp ~/.Xauthority "$CHROOT_DIR"/~"$USER" 2>/dev/null
 
 # init user
 if ! user_exists; then
@@ -49,7 +73,6 @@ if ! user_exists; then
 fi
 
 # chroot
-cp -L /etc/resolv.conf "$CHROOT_DIR"/etc/resolv.conf
 chroot "$CHROOT_DIR" su - "$USER"
 
 # umount proc, sys, dev
