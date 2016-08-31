@@ -77,7 +77,7 @@ function init_env {
 }
 
 # enable networking
-cp -L "/etc/resolv.conf"        "$CHROOT_DIR/etc/resolv.conf"
+cp -L "/etc/resolv.conf" "$CHROOT_DIR/etc/resolv.conf"
 
 # init user
 if ! user_exists; then
@@ -86,7 +86,8 @@ if ! user_exists; then
 fi
 
 # enable X
-cp    "/home/$USER/.Xauthority" "$CHROOT_DIR/home/$USER/.Xauthority"
+cp "/home/$USER/.Xauthority" "$CHROOT_DIR/home/$USER/.Xauthority"
+in_chroot chmod $USER:$USER "/home/$USER/.Xauthority"
 
 # chroot
 chroot "$CHROOT_DIR" su - "$USER"
