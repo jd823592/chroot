@@ -45,26 +45,40 @@ function init_env {
 
     as_user_in_chroot "cabal update"
 
-    as_user_in_chroot "git clone https://github.com/ekmett/linear"
-    as_user_in_chroot_dir "linear" "cabal install"
+    as_user_in_chroot "mkdir bacon"
 
-    as_user_in_chroot "git clone https://github.com/diagrams/diagrams-lib"
-    as_user_in_chroot_dir "diagrams-lib" "cabal install"
+    # download bleeding edge dependencies where hackage is outdated
+    as_user_in_chroot_dir "bacon" "hg clone https://bitbucket.org/iago/z3-haskell"
 
-    as_user_in_chroot "git clone https://github.com/diagrams/diagrams-cairo"
-    as_user_in_chroot_dir "diagrams-cairo" "cabal install"
+    # download bacon
+    as_user_in_chroot_dir "bacon" "git clone https://github.com/d3sformal/bacon-core"
+    as_user_in_chroot_dir "bacon" "git clone https://github.com/d3sformal/bacon-doc"
+    as_user_in_chroot_dir "bacon" "git clone https://github.com/d3sformal/bacon-gui"
+    as_user_in_chroot_dir "bacon" "git clone https://github.com/d3sformal/bacon-main"
+    as_user_in_chroot_dir "bacon" "git clone https://github.com/d3sformal/bacon-preprocessor"
 
-    as_user_in_chroot "git clone https://github.com/diagrams/diagrams-gtk"
-    as_user_in_chroot_dir "diagrams-gtk" "cabal install"
+    as_user_in_chroot_dir "bacon/bacon-core" "cabal sandbox init"
+    as_user_in_chroot_dir "bacon/bacon-core" "cabal sandbox add-source ../z3-haskell"
 
-    as_user_in_chroot "git clone https://github.com/d3sformal/bacon"
-    as_user_in_chroot_dir "bacon" "git checkout experimental"
-    as_user_in_chroot_dir "bacon/bacon" "cabal install --dependencies-only --force-reinstalls"
+    as_user_in_chroot_dir "bacon/bacon-gui" "cabal sandbox init"
+    as_user_in_chroot_dir "bacon/bacon-gui" "cabal sandbox add-source ../z3-haskell"
+    as_user_in_chroot_dir "bacon/bacon-gui" "cabal sandbox add-source ../bacon-core"
+
+    as_user_in_chroot_dir "bacon/bacon-main" "cabal sandbox init"
+    as_user_in_chroot_dir "bacon/bacon-main" "cabal sandbox add-source ../z3-haskell"
+    as_user_in_chroot_dir "bacon/bacon-main" "cabal sandbox add-source ../bacon-core"
+    as_user_in_chroot_dir "bacon/bacon-main" "cabal sandbox add-source ../bacon-gui"
+
+    # build bacon
+    as_user_in_chroot_dir "bacon/bacon-main" "cabal install --reinstall"
+
+    # build preprocessor
+    as_user_in_chroot_dir "bacon/bacon-preprocessor" "make"
 }
 
 # enable networking, X
-cp -L /etc/resolv.conf "$CHROOT_DIR"/etc/resolv.conf
-cp ~/.Xauthority "$CHROOT_DIR"/~"$USER" 2>/dev/null
+cp -L "/etc/resolv.conf"        "$CHROOT_DIR/etc/resolv.conf"
+cp    "/home/$USER/.Xauthority" "$CHROOT_DIR/home/$USER/.Xauthority"
 
 # init user
 if ! user_exists; then
@@ -76,4 +90,11 @@ fi
 chroot "$CHROOT_DIR" su - "$USER"
 
 # umount proc, sys, dev
-mount -l | cut -d" " -f3 | grep "^$CHROOT_DIR" | sort -ur | xargs umount
+MOUNTS=$(mount -l | cut -d" " -f3 | grep "^$(readlink -f $CHROOT_DIR)" | sort -ur)
+
+echo "umount:"
+sed 's/^/    /' <<END
+$MOUNTS
+END
+
+umount $MOUNTS
