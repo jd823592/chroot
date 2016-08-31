@@ -76,15 +76,17 @@ function init_env {
     as_user_in_chroot_dir "bacon/bacon-preprocessor" "make"
 }
 
-# enable networking, X
+# enable networking
 cp -L "/etc/resolv.conf"        "$CHROOT_DIR/etc/resolv.conf"
-cp    "/home/$USER/.Xauthority" "$CHROOT_DIR/home/$USER/.Xauthority"
 
 # init user
 if ! user_exists; then
     user_add
     init_env
 fi
+
+# enable X
+cp    "/home/$USER/.Xauthority" "$CHROOT_DIR/home/$USER/.Xauthority"
 
 # chroot
 chroot "$CHROOT_DIR" su - "$USER"
