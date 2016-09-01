@@ -87,7 +87,7 @@ fi
 
 # enable X
 cp "/home/$USER/.Xauthority" "$CHROOT_DIR/home/$USER/.Xauthority"
-in_chroot chmod $USER:$USER "/home/$USER/.Xauthority"
+in_chroot chown $USER:$USER "/home/$USER/.Xauthority"
 
 # chroot
 chroot "$CHROOT_DIR" su - "$USER"
